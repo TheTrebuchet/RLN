@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRUD z Fetch API</title>
+  <!-- styling -->
+  <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- rdkit -->
+  <script src="node_modules/@rdkit/rdkit/dist/RDKit_minimal.js"></script>
+  <!-- chemdoodle -->
+  <link rel="stylesheet" href="chemdoodle/ChemDoodleWeb.css" type="text/css">
+  <script type="text/javascript" src="chemdoodle/ChemDoodleWeb.js"></script>
+  <link rel="stylesheet" href="chemdoodle/uis/jquery-ui-1.11.4.css" type="text/css">
+  <script type="text/javascript" src="chemdoodle/uis/ChemDoodleWeb-uis.js"></script>
+</head>
+<style>
+  .bordered-container {
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.119);
+    margin-bottom: 30px;
+  }
+  .hero-section {
+      padding: 50px 0;
+      text-align: center;
+      border-radius: 10px;
+    }
+    .hero-section h1 {
+      font-size: 2rem;
+    }
+    .hero-section p {
+      font-size: 1.25rem;
+    }
+</style>
+
+<body>
+  <div class="container">
+    <div class="hero-section">
+      <h1>RLN</h1>
+      <p>Reaction Lab Notebook</p
+    </div>
+  </div>
+  <div class="container full-height d-flex justify-content-center align-items-center">
+    <!-- Sketcher Section -->
+    <div class="bordered-container">
+      <div id="sketcher-container">
+        <script>
+          const dataTable = [];
+          const sketcher = new ChemDoodle.SketcherCanvas('sketcher', 800, 300, { useServices: true, oneMolecule: false });
+        </script>
+      </div>
+    </div>
+  </div>
+  <div class="container full-height justify-content-center align-items-center">
+    <div class="bordered-container">
+      <div class="tbl-container bdr">
+        <h4 class="mb-4">Reagents</h4>
+        <table id="molecule-table" class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Molar mass [g/mol]</th>
+              <th scope="col">CAS</th>
+              <th scope="col">Density</th>
+              <th scope="col">Mass</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="script.js"></script>
+</body>
+
+</html>

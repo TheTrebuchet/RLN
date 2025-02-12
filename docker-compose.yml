@@ -1,0 +1,52 @@
+services:
+  web:
+    build:
+      context: .
+    ports:
+      - "8080:80"
+    container_name: podstawowa-strona
+    depends_on:
+      - db
+      - backend
+      - rdkit-server
+
+  db:
+    image: postgres:15-alpine
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: app_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./app
+    ports:
+      - "3000:3000"
+    container_name: node-backend
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: app_db
+
+  rdkit-server:
+    build:
+      context: ./rdkit-server  # Path to the directory with Dockerfile
+    ports:
+      - "5000:5000"  # Expose port 5000 for RDKit API
+    container_name: rdkit-server
+    depends_on:
+      - db  # RDKit might depend on the DB if you want to integrate with it
+    environment:
+      - FLASK_APP=server.py
+
+volumes:
+  postgres_data:
