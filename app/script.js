@@ -2,20 +2,36 @@ document.addEventListener('DOMContentLoaded', () => {
 	const API_URL = 'http://localhost:3000/items';
 });
 
-function InternalTabletoSQL() {
-	// push data from the editor table to DB along with sketcher data
+/*
+okay so i think we can figure out here two scenarios
+1. the scheme gets edited
+2. the table gets edited
+
+1
+in first case, the drawing is run through
+we create an internal table - also based on DB [FUNCTION 1 - schemeToInternal]
+then the visible table is generated based on that [FUNCTION 2 - internalToClient]
+
+2
+in the second case, what is edited is just uploaded to the DB [FUNCTION 3 - clientToDB]
+we can skip reading the visible table if there was no input
+so we could figure a function that moves any content from visible table to the interal one
+that function will be triggered only when the table is changed
+
+meanwhile we need a function to recalculate all the values possible to be calculated [FUNCTION 4 - clientUpdate]
+*/
+
+function clientToDB() {
+	// the clientside table is read for updates and sent to DB
 }
 
-function SQLtoInternalTable() {
-	// this should run whenever its necessary to fill the table with data from DB
+function internalToClient() {
+	// the visible table is generated based on internal table
 }
 
-function schemetoInternalTable() {
+function schemeToInternal() {
 	document.querySelector("#molecule-table tbody").innerHTML = "";
-
-	// Get the main molecule from the sketcher
 	const arrayMolecules = sketcher.getMolecules();
-	// this should generate the table from the scheme, with respect to what's in the table
 	arrayMolecules.forEach((mol, index) => {
 		let molFile = ChemDoodle.writeMOL(mol);
 		let name = fetchIUPACName(molFile);
@@ -23,14 +39,14 @@ function schemetoInternalTable() {
 	})
 }
 
-function viewTableUpdate() {
+function clientUpdate() {
 	// this should update the table after the user interacts with it
 }
 
 sketcher.oldFunc = sketcher.click;
 sketcher.click = function (force) {
 	sketcher.oldFunc(force);
-	schemetoInternalTable();
+	schemeToInternal();
 }
 
 async function fetchIUPACName(molfile) {
@@ -38,21 +54,15 @@ async function fetchIUPACName(molfile) {
 		const response = await fetch('/get_iupac', {
 			method: 'POST',
 			headers: {
-				'Content-Type': 'text/plain',  // Send as plain text
+				'Content-Type': 'text/plain',
 			},
-			body: molfile, // Sending Molfile as a plain string
+			body: molfile,
 		});
-
-		const rawText = await response.text();  // Log the raw response before parsing
-		console.log("Raw Response:", rawText);
-
-		const result = JSON.parse(rawText);  // Manually parse JSON
-
-
+		const rawText = await response.text();
+		const result = JSON.parse(rawText);
 		if (response.ok) {
-			console.log("Name:", result.iupac_name);
-			console.log("MW:", result.molecular_weight);
-			console.log("smiles:", result.smiles);
+			console.log(result);
+			return result
 		} else {
 			console.error("Error:", result.error);
 		}
