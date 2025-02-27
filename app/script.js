@@ -2,6 +2,17 @@ document.addEventListener('DOMContentLoaded', () => {
 	const API_URL = 'http://localhost:3000/items';
 });
 
+var internaltable = {}
+
+sketcher.oldFunc = sketcher.click;
+sketcher.click = function (force) {
+	
+	sketcher.oldFunc(force);
+	schemeToInternal(internaltable);
+	internalToClient(internaltable);
+	// clientToDB(internalTable)
+}
+
 /*
 okay so i think we can figure out here two scenarios
 1. the scheme gets edited
@@ -25,31 +36,66 @@ function clientToDB() {
 	// the clientside table is read for updates and sent to DB
 }
 
-function internalToClient() {
-	// the visible table is generated based on internal table
+async function internalToClient(internaltable) {
+    const keys = Object.keys(internaltable);
+    const promises = keys.map(key => internaltable[key]);
+    const resolvedValues = await Promise.all(promises);
+
+    const tableBody = document.querySelector("#molecule-table tbody");
+
+    resolvedValues.forEach((data, index) => {
+        const key = keys[index]; // Get the corresponding reagent key (e.g., "reagent1")
+        let row = tableBody.querySelector(`tr[data-key="${key}"]`);
+
+        // Get values (use SMILES if iupac_name is None)
+        const name = data.iupac_name && data.iupac_name !== "None" ? data.iupac_name : data.smiles;
+        const mass = data.mass;
+        const molarMass = data.molecular_weight.toFixed(2);
+        const equivalents = data.equivalents;
+        const density = data.density;
+
+        if (row) {
+            // If row exists, update it
+            row.innerHTML = `
+                <td>${name}</td>
+                <td>${mass}</td>
+                <td>${molarMass}</td>
+                <td>${equivalents}</td>
+                <td>${density}</td>
+            `;
+        } else {
+            // If row doesn't exist, create it
+            row = document.createElement("tr");
+            row.setAttribute("data-key", key);
+            row.innerHTML = `
+                <td>${name}</td>
+                <td>${mass}</td>
+                <td>${molarMass}</td>
+                <td>${equivalents}</td>
+                <td>${density}</td>
+            `;
+            tableBody.appendChild(row);
+        }
+    });
 }
 
-function schemeToInternal() {
+
+function schemeToInternal(internaltable) {
 	document.querySelector("#molecule-table tbody").innerHTML = "";
 	const arrayMolecules = sketcher.getMolecules();
 	arrayMolecules.forEach((mol, index) => {
 		let molFile = ChemDoodle.writeMOL(mol);
-		let name = fetchIUPACName(molFile);
-		console.log(name)
+		let details = molDetails(molFile);
+		internaltable[`reagent${index}`] = details; 
 	})
+	console.log(internaltable)
 }
 
 function clientUpdate() {
 	// this should update the table after the user interacts with it
 }
 
-sketcher.oldFunc = sketcher.click;
-sketcher.click = function (force) {
-	sketcher.oldFunc(force);
-	schemeToInternal();
-}
-
-async function fetchIUPACName(molfile) {
+async function molDetails(molfile) {
 	try {
 		const response = await fetch('/get_iupac', {
 			method: 'POST',
@@ -61,7 +107,6 @@ async function fetchIUPACName(molfile) {
 		const rawText = await response.text();
 		const result = JSON.parse(rawText);
 		if (response.ok) {
-			console.log(result);
 			return result
 		} else {
 			console.error("Error:", result.error);

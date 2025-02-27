@@ -23,8 +23,7 @@ const pool = new Pool({
 
 app.use(express.text());  // Add this to handle raw text payloads
 
-app.post("/get_iupac", async (req, res) => {
-  console.log("Received raw body:", req.body);  // Log incoming request
+app.post("/get_details", async (req, res) => {
 
   const molfile = req.body;  // Since we're sending plain text, req.body contains the string directly
 
@@ -42,7 +41,6 @@ app.post("/get_iupac", async (req, res) => {
       });
 
       const data = await response.json();  // Parse JSON response from Flask
-      console.log("Received response from RDKit server:", data);
 
       if (response.ok) {
           return res.json(data);  // Forward the entire JSON to the website
