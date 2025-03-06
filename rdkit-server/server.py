@@ -23,15 +23,13 @@ def get_iupac():
         try:
             density = compounds[0].density if compounds else None
         except Exception:
-            density = None
+            density = 0.0
 
         return jsonify({
         "smiles": smiles,
         "iupac_name": iupac_name,
         "molecular_weight": molecular_weight,
         "density": density,
-        "mass": 0,  # Set to 0 initially
-        "equivalents": 1.0  # Set to 1.0 initially
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
