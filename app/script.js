@@ -1,16 +1,24 @@
 document.addEventListener('DOMContentLoaded', () => {
-	const API_URL = 'http://localhost:3000/items';
+    const API_URL = 'http://localhost:3000/items';
 });
 
 var internaltable = {}
 
 sketcher.oldFunc = sketcher.click;
 sketcher.click = function (force) {
-	
-	sketcher.oldFunc(force);
-	schemeToInternal(internaltable);
-	internalToClient(internaltable);
-	// clientToDB(internalTable)
+    console.log('refresh')
+    sketcher.oldFunc(force);
+    schemeToInternal(internaltable).then(() =>{
+    internalToClient(internaltable);})
+    //clientToDB(internaltable)
+
+    // THIS PART IS FOR TESTING
+    // const tableBody = document.querySelector("#molecule-table tbody");
+    // let row = document.createElement("tr");
+    //         row.innerHTML = `<td>${'test'}</td>`;
+    // tableBody.appendChild(row);
+
+
 }
 
 /*
@@ -33,87 +41,128 @@ meanwhile we need a function to recalculate all the values possible to be calcul
 */
 
 function clientToDB() {
-	// the clientside table is read for updates and sent to DB
+    // the clientside table is read for updates and sent to DB
 }
 
-async function internalToClient(internaltable) {
-    const keys = Object.keys(internaltable);
-    const promises = keys.map(key => internaltable[key]);
-    const resolvedValues = await Promise.all(promises);
 
+function internalToClient(internaltable) {
     const tableBody = document.querySelector("#molecule-table tbody");
 
-    resolvedValues.forEach((data, index) => {
-        const key = keys[index]; // Get the corresponding reagent key (e.g., "reagent1")
+    for (let [key, data] of Object.entries(internaltable)) {
+        console.log(data)
         let row = tableBody.querySelector(`tr[data-key="${key}"]`);
-
-        // Get values (use SMILES if iupac_name is None)
-        const name = data.iupac_name && data.iupac_name !== "None" ? data.iupac_name : data.smiles;
-        const mass = data.mass;
-        const molarMass = data.molecular_weight.toFixed(2);
-        const equivalents = data.equivalents;
-        const density = data.density;
-
         if (row) {
-            // If row exists, update it
+            // Update row with new values
             row.innerHTML = `
-                <td>${name}</td>
-                <td>${mass}</td>
-                <td>${molarMass}</td>
-                <td>${equivalents}</td>
-                <td>${density}</td>
+                <td contenteditable="true">${data.iupac_name.value}</td>
+                <td contenteditable="true">${data.mass.value}</td>
+                <td>${parseFloat(data.molecular_weight.value).toFixed(2)}</td>
+                <td contenteditable="true">${data.equivalents.value}</td>
+                <td contenteditable="true">${data.density.value}</td>
             `;
         } else {
             // If row doesn't exist, create it
             row = document.createElement("tr");
             row.setAttribute("data-key", key);
             row.innerHTML = `
-                <td>${name}</td>
-                <td>${mass}</td>
-                <td>${molarMass}</td>
-                <td>${equivalents}</td>
-                <td>${density}</td>
+                <td contenteditable="true">${data.iupac_name.value}</td>
+                <td contenteditable="true">${data.mass.value}</td>
+                <td>${data.molecular_weight.value.toFixed(2)}</td>
+                <td contenteditable="true">${data.equivalents.value}</td>
+                <td contenteditable="true">${data.density.value}</td>
             `;
             tableBody.appendChild(row);
         }
+    };
+
+};
+
+async function schemeToInternal(internaltable) {
+    //filling promisetable with contents from server
+    let promisetable = {}
+    const arrayMolecules = sketcher.getMolecules();
+    arrayMolecules.forEach((mol, index) => {
+        let molFile = ChemDoodle.writeMOL(mol);
+        let details = molDetails(molFile);
+        promisetable[`reagent${index}`] = details;
+    })
+    // building internaltable from here, while checking for changes in internal
+    // for now the modified status will be set here,
+    // but later it should be set on trigger in a different function
+    const tableBody = document.querySelector("#molecule-table tbody");
+
+    const keys = Object.keys(promisetable);
+    const promises = keys.map(key => promisetable[key]);
+    const resolvedValues = await Promise.all(promises);
+
+    resolvedValues.forEach((data, index) => { // for every reagent
+        const key = keys[index]; // Get the corresponding reagent key (e.g., "reagent1")
+        let row = tableBody.querySelector(`tr[data-key="${key}"]`); //get the row, if exists
+
+        const properties = ['iupac_name', 'mass', 'molecular_weight', 'equivalents', 'density']; // Properties to check and update
+
+        if (row) {
+            console.log('new row')
+            properties.forEach(property => { // for every property in a row
+                console.log(property)
+                const clientValue = row.children[properties.indexOf(property)].innerText.trim(); //get client value
+                console.log(clientValue)
+                if (property == 'molecular_weight') { 
+                    internaltable[key][property].value = data[property];
+                }
+                else if (internaltable[key][property].value !== clientValue) { // if client modified it
+                    internaltable[key][property].value = clientValue; //set client value and modified true
+                    internaltable[key][property].modified = true;
+
+                } else if (!internaltable[key][property].modified) { // if not modified, update
+                    internaltable[key][property].modified = false
+                    internaltable[key][property].value = data[property];
+                } else if (!clientValue) { //THIS ONLY WORKS AFTER SECOND TIME FUNCTION RUNS?
+                    internaltable[key][property].modified = false
+                    internaltable[key][property].value = data[property]
+                }
+
+    })
+        } else { // create the entry in internal
+            internaltable[key] = {
+                iupac_name: { value: data.iupac_name, modified: false },
+                mass: { value: data.mass, modified: false },
+                molecular_weight: { value: data.molecular_weight, modified: false },
+                equivalents: { value: data.equivalents, modified: false },
+                density: { value: data.density, modified: false },
+            }
+        }
     });
-}
 
+    
 
-function schemeToInternal(internaltable) {
-	document.querySelector("#molecule-table tbody").innerHTML = "";
-	const arrayMolecules = sketcher.getMolecules();
-	arrayMolecules.forEach((mol, index) => {
-		let molFile = ChemDoodle.writeMOL(mol);
-		let details = molDetails(molFile);
-		internaltable[`reagent${index}`] = details; 
-	})
-	console.log(internaltable)
-}
+    
+};
 
 function clientUpdate() {
-	// this should update the table after the user interacts with it
-}
+    // this should update the table after the user interacts with it
+};
 
 async function molDetails(molfile) {
-	try {
-		const response = await fetch('/get_iupac', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'text/plain',
-			},
-			body: molfile,
-		});
-		const rawText = await response.text();
-		const result = JSON.parse(rawText);
-		if (response.ok) {
-			return result
-		} else {
-			console.error("Error:", result.error);
-		}
-	} catch (error) {
-		console.error("Request failed", error);
-	}
+    try {
+        const response = await fetch('/get_iupac', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain',
+            },
+            body: molfile,
+        });
+        const rawText = await response.text();
+        const result = JSON.parse(rawText);
+        if (response.ok) {
+            return result
+        } else {
+            console.error("Error:", result.error);
+        }
+    } catch (error) {
+        console.error("Request failed", error);
+    }
 };
+
 
 

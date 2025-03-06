@@ -19,19 +19,19 @@ def get_iupac():
             compounds = pubchempy.get_compounds(smiles, namespace='smiles')
             iupac_name = compounds[0].iupac_name if compounds else None
         except Exception:
-            iupac_name = None
+            iupac_name = smiles
         try:
             density = compounds[0].density if compounds else None
         except Exception:
             density = None
 
         return jsonify({
-            "smiles": smiles,
-            "iupac_name": iupac_name,
-            "molecular_weight": molecular_weight,
-            "density": density,
-            "mass": 0,
-            "equivalents": 1.0
+        "smiles": smiles,
+        "iupac_name": iupac_name,
+        "molecular_weight": molecular_weight,
+        "density": density,
+        "mass": 0,  # Set to 0 initially
+        "equivalents": 1.0  # Set to 1.0 initially
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
