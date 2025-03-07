@@ -4,6 +4,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
 var internaltable = {}
 
+const table = document.getElementById("molecule-table"); // Replace with your actual table ID
+
+table.addEventListener("blur", function (event) {
+    if (event.target.matches("td[contenteditable='true']")) {
+        handleEdit(event.target);
+    }
+}, true); // Use capture mode to catch blur events properly
+
+table.addEventListener("keydown", function (event) {
+    if (event.target.matches("td[contenteditable='true']") && event.key === "Enter") {
+        event.preventDefault(); // Prevent new lines
+        event.target.blur(); // Trigger blur event
+    }
+});
+
+function handleEdit(cell) {
+    const row = cell.parentElement; // <tr>
+    const table = row.parentElement; // <tbody> or <table> if no <tbody>
+    const columnIndex = cell.cellIndex; // Get column number
+    // Assuming first column contains row keys
+    const columnName = document.querySelector(`#molecule-table thead tr`).cells[columnIndex].innerText.trim();
+    console.log(row, row.getAttribute("data-key"), columnName)
+    
+    const newValue = cell.innerText.trim();
+    if (newValue === "") {
+        internaltable[row.getAttribute("data-key")][columnName].modified = false;
+        internaltable[row.getAttribute("data-key")][columnName].value = getDefault(columnName);
+    } else {
+        internaltable[row.getAttribute("data-key")][columnName].value = newValue;
+        internaltable[row.getAttribute("data-key")][columnName].modified = true;
+    }
+
+    recalculate(internaltable);
+    internalToClient(internaltable);
+
+    console.log(internaltable)
+}
+
+function getDefault(property) {
+    switch (property) {
+        case 'equivalents':
+            return 1.0;
+        case 'mass':
+        case 'moles':
+        case 'volume':
+            return 0.0;
+        default:
+            return '';
+    }
+}
+
 sketcher.oldFunc = sketcher.click;
 sketcher.click = function (force) {
     console.log('refresh')
@@ -18,19 +69,18 @@ function clientToDB() {
 }
 
 function recalculate(internaltable) { 
-    console.log(internaltable)
 
     let ref_mole = 0;
     for (let [key, data] of Object.entries(internaltable)) {
-        if (data.moles.value) {
+        if (data.moles.modified) {
             ref_mole = data.moles.value / data.equivalents.value;
             break;
         }
-        else if (data.mass.value) {
+        else if (data.mass.modified) {
             ref_mole = data.mass.value / data.molecular_weight.value / data.equivalents.value;
             break;
         }
-        else if (data.volume.value && data.density.value) {
+        else if (data.volume.modified && data.density.value) {
             ref_mole = data.volume.value * data.density.value / data.molecular_weight.value / data.equivalents.value;
             break;
         }
@@ -38,9 +88,9 @@ function recalculate(internaltable) {
 
     // check if exactly one of moles, mass, volume was modified, if so, calculate the rest
     for (let [key, data] of Object.entries(internaltable)) {
-        if (!data.mass.value) { data.mass.value = ref_mole * data.molecular_weight.value * data.equivalents.value }
-        if (!data.moles.value) { data.moles.value = ref_mole * data.equivalents.value }
-        if (!data.volume.value && data.density.value) { data.volume.value = ref_mole * data.molecular_weight.value * data.equivalents.value / data.density.value }
+        if (!data.mass.value || !data.mass.modified) { data.mass.value = ref_mole * data.molecular_weight.value * data.equivalents.value }
+        if (!data.moles.value || !data.moles.modified) { data.moles.value = ref_mole * data.equivalents.value }
+        if ((!data.volume.value || !data.volume.modified) && data.density.value) { data.volume.value = ref_mole * data.molecular_weight.value * data.equivalents.value / data.density.value }
     }
 }
 
@@ -49,7 +99,6 @@ function internalToClient(internaltable) {
     const tableBody = document.querySelector("#molecule-table tbody");
 
     for (let [key, data] of Object.entries(internaltable)) {
-        console.log(data)
         let row = tableBody.querySelector(`tr[data-key="${key}"]`);
         const rowContent = `
             <td contenteditable="true">${data.iupac_name.value}</td>
@@ -99,11 +148,10 @@ async function schemeToInternal(internaltable) {
         const properties = ['iupac_name', 'mass', 'molecular_weight', 'moles' ,'equivalents', 'volume', 'density']; // Properties to build
 
         if (row) {
-            console.log('new row')
             properties.forEach(property => { // for every property in a row
                 var clientValue = row.children[properties.indexOf(property)].innerText.trim(); //get client value
                 // try to make clientValue float if it is a number
-                if (property == 'mass' || property == 'moles' || property == 'equivalents' || property == 'volume' || property == 'density') {
+                if (['mass', 'moles', 'equivalents', 'volume', 'density'].includes(property)) {
                     clientValue = parseFloat(clientValue);
                 }
                 if (!clientValue) { // Check for empty client value first
@@ -111,9 +159,6 @@ async function schemeToInternal(internaltable) {
                     internaltable[key][property].value = getDefault(property);
                 } else if (property == 'molecular_weight') { //this should be only updated, no check for client
                     internaltable[key][property].value = data[property];
-                } else if (internaltable[key][property].value !== clientValue) { // if client modified it
-                    internaltable[key][property].value = clientValue; //set client value and modified true
-                    internaltable[key][property].modified = true;
                 } else if (!internaltable[key][property].modified) { // if not modified, update
                     internaltable[key][property].modified = false;
                     internaltable[key][property].value = data[property] || getDefault(property);
@@ -132,19 +177,6 @@ async function schemeToInternal(internaltable) {
         }
     });
 };
-
-function getDefault(property) {
-    switch (property) {
-        case 'equivalents':
-            return 1.0;
-        case 'mass':
-        case 'moles':
-        case 'volume':
-            return 0.0;
-        default:
-            return '';
-    }
-}
 
 function clientUpdate() {
     // this should update the table after the user interacts with it
