@@ -101,13 +101,13 @@ function internalToClient(internaltable) {
     for (let [key, data] of Object.entries(internaltable)) {
         let row = tableBody.querySelector(`tr[data-key="${key}"]`);
         const rowContent = `
-            <td contenteditable="true">${data.iupac_name.value}</td>
-            <td contenteditable="true">${data.mass.value}</td>
+            <td contenteditable="true" class="${data.iupac_name.modified ? 'table-info' : ''}">${data.iupac_name.value}</td>
+            <td contenteditable="true" class="${data.mass.modified ? 'table-info' : ''}">${data.mass.value}</td>
             <td>${parseFloat(data.molecular_weight.value).toFixed(2)}</td>
-            <td contenteditable="true">${data.moles.value}</td>
-            <td contenteditable="true">${data.equivalents.value}</td>
-            <td contenteditable="true">${data.volume.value}</td>
-            <td contenteditable="true">${data.density.value}</td>
+            <td contenteditable="true" class="${data.moles.modified ? 'table-info' : ''}">${data.moles.value}</td>
+            <td contenteditable="true" class="${data.equivalents.modified ? 'table-info' : ''}">${data.equivalents.value}</td>
+            <td contenteditable="true" class="${data.volume.modified ? 'table-info' : ''}">${data.volume.value}</td>
+            <td contenteditable="true" class="${data.density.modified ? 'table-info' : ''}">${data.density.value}</td>
         `;
 
         if (row) {
