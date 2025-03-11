@@ -52,12 +52,22 @@ function getDefault(property) {
     }
 }
 
-sketcher.oldFunc = sketcher.click;
-sketcher.click = function (force) {
-    sketcher.oldFunc(force);
+function fromSchemeCycle() {
     schemeToInternal(internaltable).then(() =>{
     recalculate(internaltable);
     internalToClient(internaltable);})
+}
+
+sketcher.oldFunc = sketcher.click;
+sketcher.click = function (force) {
+    sketcher.oldFunc(force);
+    fromSchemeCycle();
+};
+
+sketcher.oldFunc2 = sketcher.keydown;
+sketcher.keydown = function (force) {
+    sketcher.oldFunc2(force);
+    fromSchemeCycle();
 };
 
 function clientToDB() {
@@ -96,15 +106,29 @@ function internalToClient(internaltable) {
 
     for (let [key, data] of Object.entries(internaltable)) {
         let row = tableBody.querySelector(`tr[data-key="${key}"]`);
+        const formatValue = (value) => {
+            if (value < 1) {
+                return parseFloat(value).toPrecision(3);
+            } else if (value > 0.0) {
+                return parseFloat(value).toFixed(2);
+            } else {
+                return "";
+            }
+        };
+
+        console.log(`Formatting values for key: ${key}`);
+        console.log(`Density value: ${data.density.value}`);
+
         const rowContent = `
             <td contenteditable="true" class="${data.iupac_name.modified ? 'table-info' : ''}">${data.iupac_name.value}</td>
-            <td contenteditable="true" class="${data.mass.modified ? 'table-info' : ''}">${data.mass.value}</td>
-            <td>${parseFloat(data.molecular_weight.value).toFixed(2)}</td>
-            <td contenteditable="true" class="${data.moles.modified ? 'table-info' : ''}">${data.moles.value}</td>
-            <td contenteditable="true" class="${data.equivalents.modified ? 'table-info' : ''}">${data.equivalents.value}</td>
-            <td contenteditable="true" class="${data.volume.modified ? 'table-info' : ''}">${data.volume.value}</td>
-            <td contenteditable="true" class="${data.density.modified ? 'table-info' : ''}">${data.density.value}</td>
+            <td contenteditable="true" class="${data.mass.modified ? 'table-info' : ''}">${formatValue(data.mass.value)}</td>
+            <td>${formatValue(data.molecular_weight.value)}</td>
+            <td contenteditable="true" class="${data.moles.modified ? 'table-info' : ''}">${formatValue(data.moles.value)}</td>
+            <td contenteditable="true" class="${data.equivalents.modified ? 'table-info' : ''}">${formatValue(data.equivalents.value)}</td>
+            <td contenteditable="true" class="${data.volume.modified ? 'table-info' : ''}">${formatValue(data.volume.value)}</td>
+            <td contenteditable="true" class="${data.density.modified ? 'table-info' : ''}">${formatValue(data.density.value)}</td>
         `;
+        console.log(rowContent);
 
         if (row) {
             // Update row with new values
