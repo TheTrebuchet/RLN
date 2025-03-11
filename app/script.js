@@ -25,7 +25,6 @@ function handleEdit(cell) {
     const columnIndex = cell.cellIndex; // Get column number
     // Assuming first column contains row keys
     const columnName = document.querySelector(`#molecule-table thead tr`).cells[columnIndex].innerText.trim();
-    console.log(row, row.getAttribute("data-key"), columnName)
     
     const newValue = cell.innerText.trim();
     if (newValue === "") {
@@ -38,8 +37,6 @@ function handleEdit(cell) {
 
     recalculate(internaltable);
     internalToClient(internaltable);
-
-    console.log(internaltable)
 }
 
 function getDefault(property) {
@@ -57,7 +54,6 @@ function getDefault(property) {
 
 sketcher.oldFunc = sketcher.click;
 sketcher.click = function (force) {
-    console.log('refresh')
     sketcher.oldFunc(force);
     schemeToInternal(internaltable).then(() =>{
     recalculate(internaltable);
@@ -121,35 +117,41 @@ function internalToClient(internaltable) {
             tableBody.appendChild(row);
         }
     }
+    // now I want to go through the tableBody and if there is a row that is not in internaltable, delete it
+    for (let row of tableBody.children) {
+        if (!Object.keys(internaltable).includes(row.getAttribute("data-key"))) {
+            row.remove();
+        }
+    }
 }
 
 async function schemeToInternal(internaltable) {
-    //filling promisetable with contents from server
-    let promisetable = {}
+    // filling promisetable with contents from server
+    let promisetable = {};
     const arrayMolecules = sketcher.getMolecules();
+    const mols_ids = arrayMolecules.map((mol, index) => `molecule_${index}`);
     arrayMolecules.forEach((mol, index) => {
         let molFile = ChemDoodle.writeMOL(mol);
         let details = molDetails(molFile);
-        promisetable[`reagent${index}`] = details;
-    })
+        promisetable[mols_ids[index]] = details;
+    });
+
     // building internaltable from here, while checking for changes in internal
     // for now the modified status will be set here,
     // but later it should be set on trigger in a different function
-    const tableBody = document.querySelector("#molecule-table tbody");
-
     const keys = Object.keys(promisetable);
     const promises = keys.map(key => promisetable[key]);
     const resolvedValues = await Promise.all(promises);
 
     resolvedValues.forEach((data, index) => { // for every reagent
-        const key = keys[index]; // Get the corresponding reagent key (e.g., "reagent1")
-        let row = tableBody.querySelector(`tr[data-key="${key}"]`); //get the row, if exists
+        const key = keys[index]; // Get the corresponding reagent key (e.g., "molecule_0")
+        let row = internaltable[key]; // get the row from internaltable, if exists
 
-        const properties = ['iupac_name', 'mass', 'molecular_weight', 'moles' ,'equivalents', 'volume', 'density']; // Properties to build
+        const properties = ['iupac_name', 'mass', 'molecular_weight', 'moles', 'equivalents', 'volume', 'density']; // Properties to build
 
         if (row) {
             properties.forEach(property => { // for every property in a row
-                var clientValue = row.children[properties.indexOf(property)].innerText.trim(); //get client value
+                var clientValue = row[property].value; // get client value
                 // try to make clientValue float if it is a number
                 if (['mass', 'moles', 'equivalents', 'volume', 'density'].includes(property)) {
                     clientValue = parseFloat(clientValue);
@@ -157,7 +159,7 @@ async function schemeToInternal(internaltable) {
                 if (!clientValue) { // Check for empty client value first
                     internaltable[key][property].modified = false;
                     internaltable[key][property].value = getDefault(property);
-                } else if (property == 'molecular_weight') { //this should be only updated, no check for client
+                } else if (property == 'molecular_weight') { // this should be only updated, no check for client
                     internaltable[key][property].value = data[property];
                 } else if (!internaltable[key][property].modified) { // if not modified, update
                     internaltable[key][property].modified = false;
@@ -173,10 +175,16 @@ async function schemeToInternal(internaltable) {
                 equivalents: { value: data.equivalents || getDefault('equivalents'), modified: false },
                 volume: { value: data.volume || getDefault('volume'), modified: false },
                 density: { value: data.density, modified: false },
-            }
+            };
         }
-    });
-};
+    })
+    // after all that I want to check if there is a key in internaltable that is not in mol_ids, if so, delete it
+    for (let key in internaltable) {
+        if (!mols_ids.includes(key)) {
+            delete internaltable[key];
+        }
+    };
+}
 
 function clientUpdate() {
     // this should update the table after the user interacts with it
