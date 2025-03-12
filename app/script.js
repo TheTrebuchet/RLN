@@ -1,3 +1,6 @@
+import { getDefault, molDetails, recalculate } from './utils.js';
+
+
 /**
  * Initializes the document and sets up event listeners.
  */
@@ -6,23 +9,36 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 var internaltable = {}
+var doodlecontent = null
 
-const table = document.getElementById("molecule-table"); // Replace with your actual table ID
+const htmltable = document.getElementById("molecule-table"); // Replace with your actual table ID
 const properties = ['iupac_name', 'mass', 'molecular_weight', 'moles', 'equivalents', 'volume', 'density']; // Properties to build
+
+sketcher.oldFunc = sketcher.click;
+sketcher.click = function (force) {
+    sketcher.oldFunc(force);
+    doodleUpdate();
+};
+
+sketcher.oldFunc2 = sketcher.keydown;
+sketcher.keydown = function (force) {
+    sketcher.oldFunc2(force);
+    doodleUpdate();
+};
 
 /**
  * Handles blur events on table cells to trigger editing.
  */
-table.addEventListener("blur", function (event) {
+htmltable.addEventListener("blur", function (event) {
     if (event.target.matches("td[contenteditable='true']")) {
-        handleEdit(event.target);
+        tableUpdate(event.target);
     }
-}, true); // Use capture mode to catch blur events properlyconst properties = ['iupac_name', 'mass', 'molecular_weight', 'moles', 'equivalents', 'volume', 'density']; // Properties to build
+}, true);
 
 /**
  * Handles keydown events on table cells to prevent new lines and trigger blur on Enter key.
  */
-table.addEventListener("keydown", function (event) {
+htmltable.addEventListener("keydown", function (event) {
     if (event.target.matches("td[contenteditable='true']") && event.key === "Enter") {
         event.preventDefault(); // Prevent new lines
         event.target.blur(); // Trigger blur event
@@ -30,11 +46,22 @@ table.addEventListener("keydown", function (event) {
 });
 
 /**
+ * Updates the internal table from the sketcher and recalculates values.
+ */
+function doodleUpdate() {
+    doodleToInternal(internaltable).then(() => {
+        recalculate(internaltable);
+        internalToClient(internaltable);
+        clientToDB();
+    })
+}
+
+/**
  * Handles editing of table cells.
  * @param {HTMLElement} cell - The table cell being edited.
  */
-function handleEdit(cell) {
-    
+function tableUpdate(cell) {
+    console.log(internaltable);
     const row = cell.parentElement; // <tr> element
     const columnIndex = cell.cellIndex; // Get column number
     // Assuming first column contains row keys
@@ -42,7 +69,6 @@ function handleEdit(cell) {
     const newValue = cell.innerText.trim();
     let key = row.getAttribute("data-key");
     let property = properties[columnIndex];
-    console.log(property)
 
     if (newValue === "") {
         internaltable[key][property].modified = false;
@@ -54,82 +80,6 @@ function handleEdit(cell) {
 
     recalculate(internaltable);
     internalToClient(internaltable);
-}
-
-/**
- * Returns the default value for a given property.
- * @param {string} property - The property name.
- * @returns {*} The default value for the property.
- */
-function getDefault(property) {
-    switch (property) {
-        case 'equivalents':
-            return 1.0;
-        case 'mass':
-        case 'moles':
-        case 'volume':
-            return 0.0;
-        default:
-            return '';
-    }
-}
-
-/**
- * Updates the internal table from the sketcher and recalculates values.
- */
-function fromSketchCycle() {
-    SketchToInternal(internaltable).then(() =>{
-    recalculate(internaltable);
-    internalToClient(internaltable);})
-}
-
-sketcher.oldFunc = sketcher.click;
-sketcher.click = function (force) {
-    sketcher.oldFunc(force);
-    fromSketchCycle();
-};
-
-sketcher.oldFunc2 = sketcher.keydown;
-sketcher.keydown = function (force) {
-    sketcher.oldFunc2(force);
-    fromSketchCycle();
-};
-
-/**
- * Sends the client-side table updates to the database.
- */
-function clientToDB() {
-    // the clientside table is read for updates and sent to DB
-}
-
-/**
- * Recalculates the values in the internal table based on modified properties.
- * @param {Object} internaltable - The internal table containing molecule data.
- */
-function recalculate(internaltable) { 
-
-    let ref_mole = 0;
-    for (let [key, data] of Object.entries(internaltable)) {
-        if (data.moles.modified) {
-            ref_mole = data.moles.value / data.equivalents.value;
-            break;
-        }
-        else if (data.mass.modified) {
-            ref_mole = data.mass.value / data.molecular_weight.value / data.equivalents.value;
-            break;
-        }
-        else if (data.volume.modified && data.density.value) {
-            ref_mole = data.volume.value * data.density.value / data.molecular_weight.value / data.equivalents.value;
-            break;
-        }
-    }
-
-    // check if exactly one of moles, mass, volume was modified, if so, calculate the rest
-    for (let [key, data] of Object.entries(internaltable)) {
-        if (!data.mass.value || !data.mass.modified) { data.mass.value = ref_mole * data.molecular_weight.value * data.equivalents.value }
-        if (!data.moles.value || !data.moles.modified) { data.moles.value = ref_mole * data.equivalents.value }
-        if ((!data.volume.value || !data.volume.modified) && data.density.value) { data.volume.value = ref_mole * data.molecular_weight.value * data.equivalents.value / data.density.value }
-    }
 }
 
 function internalToClient(internaltable) {
@@ -147,8 +97,6 @@ function internalToClient(internaltable) {
                 return parseFloat(value).toFixed(2);
             }
         };
-        console.log(data.density.value);
-        console.log(formatValue(data.density.value));
         const rowContent = `
             <td contenteditable="true" class="${data.iupac_name.modified ? 'table-info' : ''}">${data.iupac_name.value}</td>
             <td contenteditable="true" class="${data.mass.modified ? 'table-info' : ''}">${formatValue(data.mass.value)}</td>
@@ -170,7 +118,7 @@ function internalToClient(internaltable) {
             tableBody.appendChild(row);
         }
     }
-    // now I want to go through the tableBody and if there is a row that is not in internaltable, delete it
+    // goes through the tableBody and if there is a row that is not in internaltable, deletes it
     for (let row of tableBody.children) {
         if (!Object.keys(internaltable).includes(row.getAttribute("data-key"))) {
             row.remove();
@@ -178,15 +126,17 @@ function internalToClient(internaltable) {
     }
 }
 
+
 /**
  * Updates the internal table with data from the sketcher.
  * @param {Object} internaltable - The internal table containing molecule data.
  */
-async function SketchToInternal(internaltable) {
+async function doodleToInternal(internaltable) {
     // filling promisetable with contents from server
+    doodlecontent = new ChemDoodle.io.JSONInterpreter().contentTo(sketcher.molecules, sketcher.shapes);
     let promisetable = {};
     const arrayMolecules = sketcher.getMolecules();
-    const mols_ids = arrayMolecules.map((mol, index) => `molecule_${index}`);
+    const mols_ids = await doodlecontent.m.map(molecule => molecule.i);
     arrayMolecules.forEach((mol, index) => {
         let molFile = ChemDoodle.writeMOL(mol);
         let details = molDetails(molFile);
@@ -194,8 +144,6 @@ async function SketchToInternal(internaltable) {
     });
 
     // building internaltable from here, while checking for changes in internal
-    // for now the modified status will be set here,
-    // but later it should be set on trigger in a different function
     const keys = Object.keys(promisetable);
     const promises = keys.map(key => promisetable[key]);
     const resolvedValues = await Promise.all(promises);
@@ -242,37 +190,23 @@ async function SketchToInternal(internaltable) {
 }
 
 /**
- * Updates the table after the user interacts with it.
+ * Sends the client-side table updates to the database.
  */
-function clientUpdate() {
-    // this should update the table after the user interacts with it
+async function clientToDB() {
+    const newItem = {
+        name: "First Reaction",
+        description: doodlecontent
+    };
+    
+    fetch('http://localhost:3000/items', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newItem)
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error('Error:', error));
 }
-
-/**
- * Fetches molecule details from the server.
- * @param {string} molfile - The molecule file in MOL format.
- * @returns {Promise<Object>} The molecule details.
- */
-async function molDetails(molfile) {
-    try {
-        const response = await fetch('/get_iupac', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'text/plain',
-            },
-            body: molfile,
-        });
-        const rawText = await response.text();
-        const result = JSON.parse(rawText);
-        if (response.ok) {
-            return result
-        } else {
-            
-        }
-    } catch (error) {
-        
-    }
-}
-
-
 

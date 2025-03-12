@@ -1,10 +1,10 @@
 # Reaction Lab Notebook (RLN)
 
-![usage example](usage_example.png)
-
 > Warning
 >
 > **This project is in active development and is a hobby project. It is not a finished product and is subject to change. Use at your own risk.**
+
+![usage example](usage_example.png)
 
 
 ## Overview

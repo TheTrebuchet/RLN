@@ -11,6 +11,7 @@ RUN rm -rf ./*
 COPY app/index.html .
 COPY app/style.css .
 COPY app/script.js .
+COPY app/utils.js .
 COPY ./app/chemdoodle chemdoodle
 COPY ./app/node_modules/@rdkit node_modules/@rdkit
 COPY ./app/node_modules/bootstrap node_modules/bootstrap
