@@ -23,7 +23,7 @@ To set up the project, follow these steps:
     cd RLN
     ```
 
-2. Navigate to the [app](http://_vscodecontentref_/0) directory:
+2. Navigate to the app directory:
     ```sh
     cd app
     ```
@@ -50,12 +50,11 @@ To set up the project, follow these steps:
 
 ## Project Structure
 
-- [app](http://_vscodecontentref_/1): Contains the main application code.
+- `app`: Contains the main application code.
   - `index.html`: The main HTML file for the application.
   - `script.js`: The main JavaScript file containing the application logic.
   - `style.css`: The main CSS file for styling the application.
-- [docker-compose.yml](http://_vscodecontentref_/2): Docker Compose configuration file for setting up the development environment.
-- [README.md](http://_vscodecontentref_/3): This file.
+- `docker-compose.yml`: Docker Compose configuration file for setting up the development environment.
 
 ## Dependencies
 
