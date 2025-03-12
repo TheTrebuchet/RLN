@@ -19,7 +19,7 @@ To set up the project, follow these steps:
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/RLN.git
+    git clone https://github.com/TheTrebuchet/RLN.git
     cd RLN
     ```
 
