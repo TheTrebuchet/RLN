@@ -2,6 +2,11 @@
 
 ![usage example](usage_example.png)
 
+> Warning
+>
+> **This project is in active development and is a hobby project. It is not a finished product and is subject to change. Use at your own risk.**
+
+
 ## Overview
 
 Reaction Lab Notebook (RLN) is a web-based application designed to help chemists manage and document their chemical reactions. The application provides a sketcher for drawing chemical structures, a table for managing reagents, and functionality to calculate and update reagent properties.
