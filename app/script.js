@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 var internaltable = {}
 
 const table = document.getElementById("molecule-table"); // Replace with your actual table ID
+const properties = ['iupac_name', 'mass', 'molecular_weight', 'moles', 'equivalents', 'volume', 'density']; // Properties to build
 
 /**
  * Handles blur events on table cells to trigger editing.
@@ -16,7 +17,7 @@ table.addEventListener("blur", function (event) {
     if (event.target.matches("td[contenteditable='true']")) {
         handleEdit(event.target);
     }
-}, true); // Use capture mode to catch blur events properly
+}, true); // Use capture mode to catch blur events properlyconst properties = ['iupac_name', 'mass', 'molecular_weight', 'moles', 'equivalents', 'volume', 'density']; // Properties to build
 
 /**
  * Handles keydown events on table cells to prevent new lines and trigger blur on Enter key.
@@ -33,19 +34,22 @@ table.addEventListener("keydown", function (event) {
  * @param {HTMLElement} cell - The table cell being edited.
  */
 function handleEdit(cell) {
-    const row = cell.parentElement; // <tr>
-    const table = row.parentElement; // <tbody> or <table> if no <tbody>
+    
+    const row = cell.parentElement; // <tr> element
     const columnIndex = cell.cellIndex; // Get column number
     // Assuming first column contains row keys
     const columnName = document.querySelector(`#molecule-table thead tr`).cells[columnIndex].innerText.trim();
-    
     const newValue = cell.innerText.trim();
+    let key = row.getAttribute("data-key");
+    let property = properties[columnIndex];
+    console.log(property)
+
     if (newValue === "") {
-        internaltable[row.getAttribute("data-key")][columnName].modified = false;
-        internaltable[row.getAttribute("data-key")][columnName].value = getDefault(columnName);
+        internaltable[key][property].modified = false;
+        internaltable[key][property].value = getDefault(columnName);
     } else {
-        internaltable[row.getAttribute("data-key")][columnName].value = newValue;
-        internaltable[row.getAttribute("data-key")][columnName].modified = true;
+        internaltable[key][property].value = newValue;
+        internaltable[key][property].modified = true;
     }
 
     recalculate(internaltable);
@@ -128,17 +132,13 @@ function recalculate(internaltable) {
     }
 }
 
-/**
- * Updates the client-side table with values from the internal table.
- * @param {Object} internaltable - The internal table containing molecule data.
- */
 function internalToClient(internaltable) {
     const tableBody = document.querySelector("#molecule-table tbody");
 
     for (let [key, data] of Object.entries(internaltable)) {
         let row = tableBody.querySelector(`tr[data-key="${key}"]`);
         const formatValue = (value) => {
-            if (isNaN(value) || value === null || value === undefined) {
+            if (isNaN(value) || value === null || value === undefined || value === "") {
                 return "";
             }
             if (value < 1) {
@@ -147,10 +147,8 @@ function internalToClient(internaltable) {
                 return parseFloat(value).toFixed(2);
             }
         };
-
-        console.log(`Formatting values for key: ${key}`);
-        console.log(`Density value: ${data.density.value}`);
-
+        console.log(data.density.value);
+        console.log(formatValue(data.density.value));
         const rowContent = `
             <td contenteditable="true" class="${data.iupac_name.modified ? 'table-info' : ''}">${data.iupac_name.value}</td>
             <td contenteditable="true" class="${data.mass.modified ? 'table-info' : ''}">${formatValue(data.mass.value)}</td>
@@ -160,7 +158,6 @@ function internalToClient(internaltable) {
             <td contenteditable="true" class="${data.volume.modified ? 'table-info' : ''}">${formatValue(data.volume.value)}</td>
             <td contenteditable="true" class="${data.density.modified ? 'table-info' : ''}">${formatValue(data.density.value)}</td>
         `;
-        console.log(rowContent);
 
         if (row) {
             // Update row with new values
@@ -206,8 +203,6 @@ async function SketchToInternal(internaltable) {
     resolvedValues.forEach((data, index) => { // for every reagent
         const key = keys[index]; // Get the corresponding reagent key (e.g., "molecule_0")
         let row = internaltable[key]; // get the row from internaltable, if exists
-
-        const properties = ['iupac_name', 'mass', 'molecular_weight', 'moles', 'equivalents', 'volume', 'density']; // Properties to build
 
         if (row) {
             properties.forEach(property => { // for every property in a row
@@ -272,10 +267,10 @@ async function molDetails(molfile) {
         if (response.ok) {
             return result
         } else {
-            console.error("Error:", result.error);
+            
         }
     } catch (error) {
-        console.error("Request failed", error);
+        
     }
 }
 
