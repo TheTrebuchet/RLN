@@ -1,3 +1,6 @@
+/**
+ * Initializes the document and sets up event listeners.
+ */
 document.addEventListener('DOMContentLoaded', () => {
     const API_URL = 'http://localhost:3000/items';
 });
@@ -6,12 +9,18 @@ var internaltable = {}
 
 const table = document.getElementById("molecule-table"); // Replace with your actual table ID
 
+/**
+ * Handles blur events on table cells to trigger editing.
+ */
 table.addEventListener("blur", function (event) {
     if (event.target.matches("td[contenteditable='true']")) {
         handleEdit(event.target);
     }
 }, true); // Use capture mode to catch blur events properly
 
+/**
+ * Handles keydown events on table cells to prevent new lines and trigger blur on Enter key.
+ */
 table.addEventListener("keydown", function (event) {
     if (event.target.matches("td[contenteditable='true']") && event.key === "Enter") {
         event.preventDefault(); // Prevent new lines
@@ -19,6 +28,10 @@ table.addEventListener("keydown", function (event) {
     }
 });
 
+/**
+ * Handles editing of table cells.
+ * @param {HTMLElement} cell - The table cell being edited.
+ */
 function handleEdit(cell) {
     const row = cell.parentElement; // <tr>
     const table = row.parentElement; // <tbody> or <table> if no <tbody>
@@ -39,6 +52,11 @@ function handleEdit(cell) {
     internalToClient(internaltable);
 }
 
+/**
+ * Returns the default value for a given property.
+ * @param {string} property - The property name.
+ * @returns {*} The default value for the property.
+ */
 function getDefault(property) {
     switch (property) {
         case 'equivalents':
@@ -52,8 +70,11 @@ function getDefault(property) {
     }
 }
 
-function fromSchemeCycle() {
-    schemeToInternal(internaltable).then(() =>{
+/**
+ * Updates the internal table from the sketcher and recalculates values.
+ */
+function fromSketchCycle() {
+    SketchToInternal(internaltable).then(() =>{
     recalculate(internaltable);
     internalToClient(internaltable);})
 }
@@ -61,19 +82,26 @@ function fromSchemeCycle() {
 sketcher.oldFunc = sketcher.click;
 sketcher.click = function (force) {
     sketcher.oldFunc(force);
-    fromSchemeCycle();
+    fromSketchCycle();
 };
 
 sketcher.oldFunc2 = sketcher.keydown;
 sketcher.keydown = function (force) {
     sketcher.oldFunc2(force);
-    fromSchemeCycle();
+    fromSketchCycle();
 };
 
+/**
+ * Sends the client-side table updates to the database.
+ */
 function clientToDB() {
     // the clientside table is read for updates and sent to DB
 }
 
+/**
+ * Recalculates the values in the internal table based on modified properties.
+ * @param {Object} internaltable - The internal table containing molecule data.
+ */
 function recalculate(internaltable) { 
 
     let ref_mole = 0;
@@ -100,19 +128,23 @@ function recalculate(internaltable) {
     }
 }
 
-
+/**
+ * Updates the client-side table with values from the internal table.
+ * @param {Object} internaltable - The internal table containing molecule data.
+ */
 function internalToClient(internaltable) {
     const tableBody = document.querySelector("#molecule-table tbody");
 
     for (let [key, data] of Object.entries(internaltable)) {
         let row = tableBody.querySelector(`tr[data-key="${key}"]`);
         const formatValue = (value) => {
+            if (isNaN(value) || value === null || value === undefined) {
+                return "";
+            }
             if (value < 1) {
                 return parseFloat(value).toPrecision(3);
-            } else if (value > 0.0) {
-                return parseFloat(value).toFixed(2);
             } else {
-                return "";
+                return parseFloat(value).toFixed(2);
             }
         };
 
@@ -149,7 +181,11 @@ function internalToClient(internaltable) {
     }
 }
 
-async function schemeToInternal(internaltable) {
+/**
+ * Updates the internal table with data from the sketcher.
+ * @param {Object} internaltable - The internal table containing molecule data.
+ */
+async function SketchToInternal(internaltable) {
     // filling promisetable with contents from server
     let promisetable = {};
     const arrayMolecules = sketcher.getMolecules();
@@ -210,10 +246,18 @@ async function schemeToInternal(internaltable) {
     };
 }
 
+/**
+ * Updates the table after the user interacts with it.
+ */
 function clientUpdate() {
     // this should update the table after the user interacts with it
-};
+}
 
+/**
+ * Fetches molecule details from the server.
+ * @param {string} molfile - The molecule file in MOL format.
+ * @returns {Promise<Object>} The molecule details.
+ */
 async function molDetails(molfile) {
     try {
         const response = await fetch('/get_iupac', {
@@ -233,7 +277,7 @@ async function molDetails(molfile) {
     } catch (error) {
         console.error("Request failed", error);
     }
-};
+}
 
 
 
