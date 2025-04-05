@@ -50,6 +50,7 @@ htmltable.addEventListener("keydown", function (event) {
  */
 function doodleUpdate() {
     doodleToInternal(internaltable).then(() => {
+        console.log(internaltable);
         recalculate(internaltable);
         internalToClient(internaltable);
         clientToDB();
@@ -84,7 +85,6 @@ function tableUpdate(cell) {
 
 function internalToClient(internaltable) {
     const tableBody = document.querySelector("#molecule-table tbody");
-
     for (let [key, data] of Object.entries(internaltable)) {
         let row = tableBody.querySelector(`tr[data-key="${key}"]`);
         const formatValue = (value) => {
@@ -136,6 +136,16 @@ async function doodleToInternal(internaltable) {
     doodlecontent = new ChemDoodle.io.JSONInterpreter().contentTo(sketcher.molecules, sketcher.shapes);
     let promisetable = {};
     const arrayMolecules = sketcher.getMolecules();
+    // first maybe lets see if there are any molecules to begin with
+    if (arrayMolecules.length == 0) {
+        console.log("No molecules to process");
+        // Clear the internaltable without reassigning it
+        for (let key in internaltable) {
+            delete internaltable[key];
+        }
+        return;
+    }
+    console.log('filling table from doodle');
     const mols_ids = await doodlecontent.m.map(molecule => molecule.i);
     arrayMolecules.forEach((mol, index) => {
         let molFile = ChemDoodle.writeMOL(mol);
