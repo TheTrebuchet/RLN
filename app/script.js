@@ -5,7 +5,7 @@ import { getDefault, molDetails, recalculate } from './utils.js';
  * Initializes the document and sets up event listeners.
  */
 document.addEventListener('DOMContentLoaded', () => {
-    const API_URL = 'http://localhost:3000/items';
+    const API_URL = 'http://localhost:3000/reactions';
 });
 
 var internaltable = {}
@@ -50,6 +50,7 @@ htmltable.addEventListener("keydown", function (event) {
  */
 function doodleUpdate() {
     doodleToInternal(internaltable).then(() => {
+        updateInternalFromDB(internaltable);
         recalculate(internaltable);
         internalToClient(internaltable);
         clientToDB();
@@ -136,6 +137,10 @@ async function doodleToInternal(internaltable) {
     doodlecontent = new ChemDoodle.io.JSONInterpreter().contentTo(sketcher.molecules, sketcher.shapes);
     let promisetable = {};
     const arrayMolecules = sketcher.getMolecules();
+    if (arrayMolecules.length === 0) {
+        internaltable = {};
+        return;
+    }
     const mols_ids = await doodlecontent.m.map(molecule => molecule.i);
     arrayMolecules.forEach((mol, index) => {
         let molFile = ChemDoodle.writeMOL(mol);
@@ -171,6 +176,7 @@ async function doodleToInternal(internaltable) {
             });
         } else { // create the entry in internal
             internaltable[key] = {
+                db_id: { value: null, modified: false },
                 iupac_name: { value: data.iupac_name, modified: false },
                 mass: { value: data.mass || getDefault('mass'), modified: false },
                 molecular_weight: { value: data.molecular_weight, modified: false },
@@ -190,15 +196,17 @@ async function doodleToInternal(internaltable) {
 }
 
 /**
- * Sends the client-side table updates to the database.
+ * Sends the client-side table updates to the database using the upsert endpoint.
  */
 async function clientToDB() {
+    // this will push the reaction entry itself to DB
     const newItem = {
+        id: 1,
         name: "First Reaction",
-        description: doodlecontent
+        doodle: doodlecontent
     };
     
-    fetch('http://localhost:3000/items', {
+    fetch('http://localhost:3000/reactions/upsert', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -210,3 +218,15 @@ async function clientToDB() {
     .catch(error => console.error('Error:', error));
 }
 
+function updateInternalFromDB(internaltable) {
+   // iterate over the internaltable, if no id, push molecule to DB, if id, update in DB
+   for (let [key, data] of Object.entries(internaltable)) {
+       if (!data.db_id.value) {
+           // push to DB
+           
+       } else {
+           // update in DB
+           
+   }   
+}
+}
