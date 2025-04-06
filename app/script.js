@@ -192,7 +192,9 @@ async function doodleToInternal(internaltable) {
             };
         }
     })
-    // after all that I want to check if there is a key in internaltable that is not in mol_ids, if so, delete it
+    // after all that I want to check if there is a key in internaltable that is not in mol_ids 
+    // leftover after deleting sth from doodle
+    // , if so, delete it
     for (let key in internaltable) {
         if (!mols_ids.includes(key)) {
             delete internaltable[key];
@@ -224,7 +226,20 @@ async function clientToDB() {
 }
 
 function updateInternalFromDB(internaltable) {
-   // iterate over the internaltable, if no id, push molecule to DB, if id, update in DB
+    /**  iterate over the internaltable, if no id, push molecule to DB, if id, update in DB
+    * lets settle here something
+    * this function should default the name of the compound to the one from db, if it exists, it should also download its id
+    * that should uncheck the modified status of the name, we want to default to db name at any cost
+    * the name should then became not editable, with some kind of reference to parent reaction
+    
+    * db_id should be cleared everytime a structure changes
+
+    * so whenever we meet a compound without db_id, we should try to push it
+    * I guess first we should come up with a list of db_ids we have
+    * if in db, there is a compound with id of our reaction 
+    * and we don't have a compound with such db_id, it should be deleted from db
+    * only then we push new compounds with references to our reaction
+    */
    for (let [key, data] of Object.entries(internaltable)) {
        if (!data.db_id.value) {
            // push to DB
